@@ -1,0 +1,17 @@
+# Секреты и окружение
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# Данные контейнеров
+volumes/
+data/
+*.log
+
+# IDE и ОС
+.idea/
+.vscode/
+.DS_Store
