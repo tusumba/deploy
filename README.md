@@ -15,9 +15,6 @@
 
 ## Запуск
 
-<<<<<<< Updated upstream
-Описание появится после готовности Compose-файла (#18905).
-=======
 Нужны Git и Docker с Compose v2.
 
 1. Склонируйте репозитории сервисов рядом с `deploy`:
@@ -121,7 +118,6 @@
 | остальное под `/v1/events`, `/v1/clubs`, `/v1/team-invitations` | `events` |
 
 Новый внешний путь сервиса нужно добавить в `map $uri $backend` в `nginx/default.conf`, иначе шлюз вернёт 404.
->>>>>>> Stashed changes
 
 ## Мониторинг и логи
 
