@@ -1,0 +1,61 @@
+storage:
+  type: sqlite
+  path: /data/gatus.db
+
+ui:
+  title: Стенд Tusumba
+  header: Стенд Tusumba
+
+x-service: &service
+  group: Сервисы
+  interval: 15s
+  conditions:
+    - "[STATUS] == 200"
+    - "[BODY].status == ok"
+    - "[RESPONSE_TIME] < 1000"
+
+x-tcp: &tcp
+  group: Инфраструктура
+  interval: 15s
+  conditions:
+    - "[CONNECTED] == true"
+
+endpoints:
+  - name: Шлюз nginx
+    group: Шлюз
+    url: http://nginx/health
+    interval: 15s
+    conditions:
+      - "[STATUS] == 200"
+
+  - name: identity
+    url: http://identity:8000/health
+    <<: *service
+
+  - name: events
+    url: http://events:8000/health
+    <<: *service
+
+  - name: ticketing
+    url: http://ticketing:8000/health
+    <<: *service
+
+  - name: moderation
+    url: http://moderation:8000/health
+    <<: *service
+
+  - name: notifications
+    url: http://notifications:8000/health
+    <<: *service
+
+  - name: PostgreSQL
+    url: tcp://postgres:5432
+    <<: *tcp
+
+  - name: RabbitMQ
+    url: tcp://rabbitmq:5672
+    <<: *tcp
+
+  - name: Redis
+    url: tcp://redis:6379
+    <<: *tcp

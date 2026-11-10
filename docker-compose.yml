@@ -5,8 +5,17 @@ x-service-env: &service-env
   LOG_LEVEL: ${LOG_LEVEL:-INFO}
   RABBITMQ_URL: amqp://${RABBITMQ_USER:?}:${RABBITMQ_PASSWORD:?}@rabbitmq:5672/
   REDIS_URL: redis://:${REDIS_PASSWORD:?}@redis:6379/0
+  JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY:?}
+  SERVICE_TOKEN: ${SERVICE_TOKEN:?}
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "5"
 
 x-migrate: &migrate
+  logging: *logging
   command: ["alembic", "upgrade", "head"]
   pull_policy: never
   restart: "no"
@@ -16,6 +25,7 @@ x-migrate: &migrate
 
 x-service: &service
   restart: unless-stopped
+  logging: *logging
   healthcheck:
     test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)"]
     interval: 10s
@@ -34,6 +44,7 @@ services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
+    logging: *logging
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
@@ -55,6 +66,7 @@ services:
   rabbitmq:
     image: rabbitmq:4.1-alpine
     restart: unless-stopped
+    logging: *logging
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:?}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?}
@@ -70,6 +82,7 @@ services:
   redis:
     image: redis:7.4-alpine
     restart: unless-stopped
+    logging: *logging
     command: ["sh", "-c", "exec redis-server --requirepass \"$$REDIS_PASSWORD\" --appendonly yes"]
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?}
@@ -174,28 +187,52 @@ services:
   nginx:
     image: nginx:1.28-alpine
     restart: unless-stopped
+    logging: *logging
     ports:
       - "${HTTP_PORT:-8080}:80"
+      - "${OPS_PORT:-8081}:8081"
+    environment:
+      OPS_USER: ${OPS_USER:?}
+      OPS_PASSWORD: ${OPS_PASSWORD:?}
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/ops.conf:/etc/nginx/conf.d/ops.conf:ro
+      - ./nginx/ops-htpasswd.sh:/docker-entrypoint.d/40-ops-htpasswd.sh:ro
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/health"]
       interval: 10s
       timeout: 3s
       retries: 5
-    depends_on:
-      identity:
-        condition: service_healthy
-      events:
-        condition: service_healthy
-      ticketing:
-        condition: service_healthy
-      moderation:
-        condition: service_healthy
-      notifications:
-        condition: service_healthy
+
+  gatus:
+    image: twinproduction/gatus:v5.37.0
+    restart: unless-stopped
+    logging: *logging
+    volumes:
+      - ./gatus/config.yaml:/config/config.yaml:ro
+      - gatus-data:/data
+
+  dozzle:
+    image: amir20/dozzle:v11.3.5
+    restart: unless-stopped
+    logging: *logging
+    environment:
+      DOZZLE_BASE: /logs
+      DOZZLE_FILTER: label=com.docker.compose.project=${COMPOSE_PROJECT_NAME}
+      DOZZLE_NO_ANALYTICS: "true"
+      DOZZLE_RELEASE_CHECK_MODE: manual
+      DOZZLE_IMAGE_CHECK_MODE: "off"
+      DOZZLE_DISABLE_SETUP_WIZARD: "true"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    healthcheck:
+      test: ["CMD", "/dozzle", "healthcheck"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
 
 volumes:
   postgres-data:
   rabbitmq-data:
   redis-data:
+  gatus-data:
