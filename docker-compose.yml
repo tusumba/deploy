@@ -101,6 +101,7 @@ services:
       <<: *service-env
       SERVICE_NAME: identity
       DATABASE_URL: postgresql+asyncpg://identity:${IDENTITY_DB_PASSWORD:?}@postgres:5432/tusumba
+      JWT_PRIVATE_KEY: ${JWT_PRIVATE_KEY:?}
 
   identity:
     <<: *service
@@ -188,6 +189,8 @@ services:
     image: nginx:1.28-alpine
     restart: unless-stopped
     logging: *logging
+    labels:
+      tusumba.config-rev: ${NGINX_CONFIG_REV:-local}
     ports:
       - "${HTTP_PORT:-8080}:80"
       - "${OPS_PORT:-8081}:8081"
@@ -208,6 +211,8 @@ services:
     image: twinproduction/gatus:v5.37.0
     restart: unless-stopped
     logging: *logging
+    labels:
+      tusumba.config-rev: ${GATUS_CONFIG_REV:-local}
     volumes:
       - ./gatus/config.yaml:/config/config.yaml:ro
       - gatus-data:/data

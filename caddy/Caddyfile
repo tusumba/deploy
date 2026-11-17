@@ -1,0 +1,10 @@
+{$DOMAIN} {$SERVICE_DOMAINS} {
+	encode zstd gzip
+	reverse_proxy nginx:80
+}
+
+{$DOMAIN}:8443 {
+	reverse_proxy nginx:8081 {
+		flush_interval -1
+	}
+}
