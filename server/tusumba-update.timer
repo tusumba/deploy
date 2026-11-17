@@ -1,0 +1,9 @@
+[Unit]
+Description=Проверка обновлений стенда Tusumba раз в 2 минуты
+
+[Timer]
+OnBootSec=1min
+OnUnitInactiveSec=2min
+
+[Install]
+WantedBy=timers.target

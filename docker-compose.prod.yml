@@ -1,0 +1,38 @@
+services:
+  nginx:
+    ports: !reset []
+
+  caddy:
+    image: caddy:2.11.6-alpine
+    restart: unless-stopped
+    labels:
+      tusumba.config-rev: ${CADDY_CONFIG_REV:-local}
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "5"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+      - "8443:8443"
+    environment:
+      DOMAIN: ${DOMAIN:?}
+      SERVICE_DOMAINS: ${SERVICE_DOMAINS:?}
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:2019/config/"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    depends_on:
+      nginx:
+        condition: service_started
+
+volumes:
+  caddy-data:
+  caddy-config:
